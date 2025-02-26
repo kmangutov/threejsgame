@@ -1,17 +1,21 @@
-// Scene setup
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb); // Sky blue
+// Ensure scene and camera are only created once
+if (typeof window.scene === "undefined") {
+    window.scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+}
 
-// Camera setup
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 5, 10);
-camera.lookAt(0, 0, 0);
+if (typeof window.camera === "undefined") {
+    window.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, 0);
+}
 
-// Renderer setup
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
-document.body.appendChild(renderer.domElement);
+if (typeof window.renderer === "undefined") {
+    window.renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+}
 
 // Lighting
 const ambientLight = new THREE.AmbientLight(0x404040);
@@ -22,14 +26,15 @@ directionalLight.position.set(10, 20, 10);
 directionalLight.castShadow = true;
 scene.add(directionalLight);
 
-// Create world elements
+// World
 createWorld(scene);
 createRiver(scene);
 
-// Create player
-const player = createPlayer(scene);
+// Player
+const player = createCharacter(scene);
+setupPlayerInput(player);
 
-// Camera follow logic
+// Camera Follow Function
 function updateCamera() {
     const cameraOffset = new THREE.Vector3(0, 5, 10);
     const rotatedOffset = cameraOffset.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
@@ -37,19 +42,22 @@ function updateCamera() {
     camera.lookAt(player.group.position);
 }
 
-// Handle window resize
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
+// 60 FPS Logic Update
+const TARGET_FPS = 60;
+const FRAME_TIME = 1000 / TARGET_FPS;
+let lastFrameTime = performance.now();
 
-// Animation loop
-function animate() {
-    requestAnimationFrame(animate);
-    updatePlayerMovement(player);
+function gameLoop() {
+    requestAnimationFrame(gameLoop);
+
+    const now = performance.now();
+    const deltaTime = (now - lastFrameTime) / 16.67; // Normalize to ~60 FPS
+    lastFrameTime = now;
+
+    updatePlayerMovement(player, deltaTime);
     updateCamera();
+
     renderer.render(scene, camera);
 }
 
-animate();
+gameLoop();
