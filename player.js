@@ -14,6 +14,7 @@ function setupPlayerInput(player) {
         if (keys.hasOwnProperty(key)) keys[key] = true;
         if (e.key === "ArrowLeft") keys.left = true;
         if (e.key === "ArrowRight") keys.right = true;
+        if (e.key === " ") keys.space = true;
     });
 
     window.addEventListener("keyup", (e) => {
@@ -21,6 +22,7 @@ function setupPlayerInput(player) {
         if (keys.hasOwnProperty(key)) keys[key] = false;
         if (e.key === "ArrowLeft") keys.left = false;
         if (e.key === "ArrowRight") keys.right = false;
+        if (e.key === " ") keys.space = false;
     });
 
     // Mouse Controls
@@ -66,14 +68,35 @@ function updatePlayerMovement(player, deltaTime) {
     const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
     const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
 
-    if (keys.w) player.group.position.add(forward.multiplyScalar(player.speed * deltaTime));
-    if (keys.s) player.group.position.add(forward.negate().multiplyScalar(player.speed * deltaTime));
-    if (keys.a) player.group.position.add(right.negate().multiplyScalar(player.speed * deltaTime));
-    if (keys.d) player.group.position.add(right.multiplyScalar(player.speed * deltaTime));
+    // Handle movement
+    if (keys.w) {
+        player.group.position.add(forward.clone().multiplyScalar(player.speed * deltaTime));
+        player.movementState = "walking";
+    } else if (keys.s) {
+        player.group.position.add(forward.clone().negate().multiplyScalar(player.speed * deltaTime));
+        player.movementState = "walking";
+    } else if (keys.a) {
+        player.group.position.add(right.clone().negate().multiplyScalar(player.speed * deltaTime));
+        player.movementState = "walking";
+    } else if (keys.d) {
+        player.group.position.add(right.clone().multiplyScalar(player.speed * deltaTime));
+        player.movementState = "walking";
+    } else if (!player.jumping) {
+        // Only set to idle if not jumping and not moving
+        player.movementState = "idle";
+    }
 
-    // Fix: Rotate Player with Arrow Keys
+    // Handle turning
     if (keys.left) player.group.rotation.y += player.turnSpeed * deltaTime;
     if (keys.right) player.group.rotation.y -= player.turnSpeed * deltaTime;
+    
+    // Handle jumping
+    if (keys.space) {
+        startJumpAnimation(player);
+    }
+    
+    // Update character animations
+    updateCharacterAnimation(player, deltaTime);
 }
 
 // Expose globally

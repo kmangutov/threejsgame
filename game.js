@@ -57,6 +57,8 @@ function gameLoop() {
     updatePlayerMovement(player, deltaTime);
     updateCamera();
 
+    TWEEN.update()
+
     renderer.render(scene, camera);
 }
 
