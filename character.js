@@ -22,6 +22,9 @@ function createCharacter(scene) {
     character.head = createBox(0.8, 0.8, 0.8, 0xffdbac);
     character.head.position.y = 1.8;
     character.group.add(character.head);
+    
+    // Face (smiley)
+    addSmileyFace(character.head);
 
     // Arms
     character.arms = {
@@ -136,6 +139,52 @@ function updateCharacterAnimation(character, deltaTime) {
             character.arms.right.rotation.x = -0.5;
             break;
     }
+}
+
+function addSmileyFace(head) {
+    // Create a group for the face elements
+    const faceGroup = new THREE.Group();
+    
+    // Left eye
+    const leftEye = new THREE.Mesh(
+        new THREE.CircleGeometry(0.06, 16),
+        new THREE.MeshBasicMaterial({ color: 0x000000 })
+    );
+    leftEye.position.set(-0.2, 0.1, 0.41);
+    
+    // Right eye
+    const rightEye = new THREE.Mesh(
+        new THREE.CircleGeometry(0.06, 16),
+        new THREE.MeshBasicMaterial({ color: 0x000000 })
+    );
+    rightEye.position.set(0.2, 0.1, 0.41);
+    
+    // Smile (curved line)
+    const smileGeometry = new THREE.BufferGeometry();
+    const smileCurve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(-0.2, -0.1, 0.41),
+        new THREE.Vector3(0, -0.2, 0.41),
+        new THREE.Vector3(0.2, -0.1, 0.41)
+    );
+    
+    const smilePoints = smileCurve.getPoints(20);
+    smileGeometry.setFromPoints(smilePoints);
+    
+    const smile = new THREE.Line(
+        smileGeometry,
+        new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 3 })
+    );
+    
+    // Add all face elements to the face group
+    faceGroup.add(leftEye);
+    faceGroup.add(rightEye);
+    faceGroup.add(smile);
+    
+    // Position the face on the front of the head
+    faceGroup.position.z = 0.4;
+    
+    // Add the face group to the head
+    head.add(faceGroup);
 }
 
 // Expose globally

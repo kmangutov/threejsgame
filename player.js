@@ -7,6 +7,11 @@ if (typeof window.keys === "undefined") {
 let isDragging = false;
 let isRightClick = false;
 let previousMousePosition = { x: 0, y: 0 };
+let cameraAngle = 0;
+let cameraHeight = 5;
+let cameraDistance = 10;
+let cameraFollow = true; // Single boolean state for camera follow
+let deltaMove = { x: 0, y: 0 };
 
 function setupPlayerInput(player) {
     window.addEventListener("keydown", (e) => {
@@ -31,28 +36,47 @@ function setupPlayerInput(player) {
         isRightClick = e.button === 2;
         previousMousePosition.x = e.clientX;
         previousMousePosition.y = e.clientY;
+        
+        // Left-click drag disables camera follow
+        if (e.button === 0) {
+            cameraFollow = false;
+        }
+        
+        // Stop any active camera tween when user starts dragging
+        if (cameraTween) {
+            cameraTween.stop();
+            cameraTween = null;
+        }
     });
 
-    window.addEventListener("mouseup", () => {
+    window.addEventListener("mouseup", (e) => {
         isDragging = false;
+        
+        // Re-enable camera follow when left mouse is released
+        if (e.button === 0) {
+            cameraFollow = true;
+        }
     });
 
     window.addEventListener("mousemove", (e) => {
         if (!isDragging) return;
 
-        const deltaMove = {
+        deltaMove = {
             x: e.clientX - previousMousePosition.x,
             y: e.clientY - previousMousePosition.y,
         };
 
         if (isRightClick) {
-            // Rotate Player
+            // Rotate Player (right-click drag)
             player.group.rotation.y -= deltaMove.x * 0.01;
+            // Right-click maintains camera follow mode
+            cameraFollow = true;
         } else {
-            // Move Camera
-            camera.position.x -= deltaMove.x * 0.05;
-            camera.position.y = Math.max(2, camera.position.y - deltaMove.y * 0.05);
-            camera.lookAt(player.group.position);
+            // Orbit camera around player (left-click drag)
+            cameraAngle -= deltaMove.x * 0.01;
+            cameraHeight = Math.max(2, Math.min(15, cameraHeight + deltaMove.y * 0.05));
+            // Left-click disables camera follow
+            cameraFollow = false;
         }
 
         previousMousePosition.x = e.clientX;
@@ -68,37 +92,67 @@ function updatePlayerMovement(player, deltaTime) {
     const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
     const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
 
+    const isMoving = keys.w || keys.a || keys.s || keys.d;
+    
     // Handle movement
+    let movement = new THREE.Vector3(0, 0, 0);
     if (keys.w) {
-        player.group.position.add(forward.clone().multiplyScalar(player.speed * deltaTime));
-        player.movementState = "walking";
-    } else if (keys.s) {
-        player.group.position.add(forward.clone().negate().multiplyScalar(player.speed * deltaTime));
-        player.movementState = "walking";
-    } else if (keys.a) {
-        player.group.position.add(right.clone().negate().multiplyScalar(player.speed * deltaTime));
-        player.movementState = "walking";
-    } else if (keys.d) {
-        player.group.position.add(right.clone().multiplyScalar(player.speed * deltaTime));
+        movement.add(forward.clone().multiplyScalar(player.speed * deltaTime));
+    }
+    if (keys.s) {
+        movement.add(forward.clone().negate().multiplyScalar(player.speed * deltaTime));
+    }
+    if (keys.a) {
+        movement.add(right.clone().negate().multiplyScalar(player.speed * deltaTime));
+    }
+    if (keys.d) {
+        movement.add(right.clone().multiplyScalar(player.speed * deltaTime));
+    }
+    player.group.position.add(movement);
+
+    if (isMoving) {
         player.movementState = "walking";
     } else if (!player.jumping) {
         // Only set to idle if not jumping and not moving
         player.movementState = "idle";
     }
 
-    // Handle turning
-    if (keys.left) player.group.rotation.y += player.turnSpeed * deltaTime;
-    if (keys.right) player.group.rotation.y -= player.turnSpeed * deltaTime;
+    // Handle turning with increased speed
+    const turnSpeed = player.turnSpeed * 2.0; // Double the turn speed
+    if (keys.left) {
+        player.group.rotation.y += turnSpeed * deltaTime;
+    }
+    if (keys.right) {
+        player.group.rotation.y -= turnSpeed * deltaTime;
+    }
     
     // Handle jumping
     if (keys.space) {
         startJumpAnimation(player);
     }
     
+    // Update camera position if following is enabled
+    if (cameraFollow && (isMoving || keys.left || keys.right || isRightClick)) {
+        resetCameraFollow(player);
+    }
+    
     // Update character animations
     updateCharacterAnimation(player, deltaTime);
+}
+
+function resetCameraFollow(player) {
+    // Set camera angle to match player rotation
+    cameraAngle = player.group.rotation.y;
+    
+    // Set default camera height and distance
+    cameraHeight = 5;
+    cameraDistance = 10;
 }
 
 // Expose globally
 window.setupPlayerInput = setupPlayerInput;
 window.updatePlayerMovement = updatePlayerMovement;
+window.cameraAngle = cameraAngle;
+window.cameraHeight = cameraHeight;
+window.cameraDistance = cameraDistance;
+window.cameraFollow = cameraFollow;

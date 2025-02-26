@@ -11,7 +11,12 @@ if (typeof window.camera === "undefined") {
 }
 
 if (typeof window.renderer === "undefined") {
-    window.renderer = new THREE.WebGLRenderer({ antialias: true });
+    window.renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        alpha: false,
+        powerPreference: "high-performance",
+        preserveDrawingBuffer: true
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
@@ -36,30 +41,76 @@ setupPlayerInput(player);
 
 // Camera Follow Function
 function updateCamera() {
-    const cameraOffset = new THREE.Vector3(0, 5, 10);
-    const rotatedOffset = cameraOffset.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
-    camera.position.copy(player.group.position).add(rotatedOffset);
-    camera.lookAt(player.group.position);
+    // Calculate camera position based on orbit angle and height
+    const x = Math.sin(cameraAngle) * cameraDistance;
+    const z = Math.cos(cameraAngle) * cameraDistance;
+    
+    // Set camera position relative to player
+    camera.position.set(
+        player.group.position.x + x,
+        player.group.position.y + cameraHeight,
+        player.group.position.z + z
+    );
+    
+    // Look at player
+    camera.lookAt(
+        player.group.position.x,
+        player.group.position.y + 1, // Look at upper body/head level
+        player.group.position.z
+    );
 }
 
 // 60 FPS Logic Update
 const TARGET_FPS = 60;
 const FRAME_TIME = 1000 / TARGET_FPS;
 let lastFrameTime = performance.now();
+let frameCounter = 0;
+let lastFpsUpdate = performance.now();
+let fps = 0;
 
 function gameLoop() {
+    // Schedule next frame
     requestAnimationFrame(gameLoop);
-
+    
+    // Calculate timing
     const now = performance.now();
-    const deltaTime = (now - lastFrameTime) / 16.67; // Normalize to ~60 FPS
-    lastFrameTime = now;
-
-    updatePlayerMovement(player, deltaTime);
-    updateCamera();
-
-    TWEEN.update()
-
-    renderer.render(scene, camera);
+    const elapsed = now - lastFrameTime;
+    
+    // Only update if enough time has passed (frame rate capping)
+    if (elapsed >= FRAME_TIME) {
+        // Calculate actual delta time (capped to prevent large jumps)
+        const deltaTime = Math.min(elapsed / FRAME_TIME, 2.0);
+        
+        // Update last frame time (compensate for any extra time)
+        lastFrameTime = now - (elapsed % FRAME_TIME);
+        
+        // Update game logic with consistent delta time
+        updatePlayerMovement(player, 1.0); // Use fixed time step for consistent animations
+        updateCamera();
+        
+        // Update any tweens
+        TWEEN.update();
+        
+        // Render the scene
+        renderer.render(scene, camera);
+        
+        // FPS counter
+        frameCounter++;
+        if (now - lastFpsUpdate >= 1000) {
+            fps = frameCounter;
+            frameCounter = 0;
+            lastFpsUpdate = now;
+            console.log(`FPS: ${fps}`);
+        }
+    }
 }
 
+// Handle window resize
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Start the game loop
 gameLoop();
