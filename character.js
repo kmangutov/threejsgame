@@ -46,6 +46,9 @@ function createCharacter(scene) {
     // Start with idle animation by default
     startIdleAnimation(character);
     
+    // Create and attach a dragon scimitar to the character's right hand
+    createDragonScimitar(character);
+    
     return character;
 }
 
@@ -150,21 +153,21 @@ function addSmileyFace(head) {
         new THREE.CircleGeometry(0.06, 16),
         new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
-    leftEye.position.set(-0.2, 0.1, 0.41);
+    leftEye.position.set(-0.2, 0.1, 0.5);
     
     // Right eye
     const rightEye = new THREE.Mesh(
         new THREE.CircleGeometry(0.06, 16),
         new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
-    rightEye.position.set(0.2, 0.1, 0.41);
+    rightEye.position.set(0.2, 0.1, 0.5);
     
     // Smile (curved line)
     const smileGeometry = new THREE.BufferGeometry();
     const smileCurve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(-0.2, -0.1, 0.41),
-        new THREE.Vector3(0, -0.2, 0.41),
-        new THREE.Vector3(0.2, -0.1, 0.41)
+        new THREE.Vector3(-0.2, -0.1, 0.5),
+        new THREE.Vector3(0, -0.2, 0.5),
+        new THREE.Vector3(0.2, -0.1, 0.5)
     );
     
     const smilePoints = smileCurve.getPoints(20);
@@ -180,11 +183,81 @@ function addSmileyFace(head) {
     faceGroup.add(rightEye);
     faceGroup.add(smile);
     
-    // Position the face on the front of the head
-    faceGroup.position.z = 0.4;
+    // No need for additional positioning as we've set the z coordinates directly
     
     // Add the face group to the head
     head.add(faceGroup);
+}
+
+function createDragonScimitar(character) {
+    // Create a group for the scimitar
+    const scimitarGroup = new THREE.Group();
+    
+    // Create the blade using a custom shape
+    const bladeShape = new THREE.Shape();
+    bladeShape.moveTo(0, 0);
+    bladeShape.lineTo(0.05, 0.6);
+    bladeShape.bezierCurveTo(0.1, 0.8, 0.2, 0.9, 0.3, 0.7);
+    bladeShape.lineTo(0.4, 0.3);
+    bladeShape.lineTo(0.3, 0);
+    bladeShape.lineTo(0, 0);
+    
+    const extrudeSettings = {
+        steps: 1,
+        depth: 0.02,
+        bevelEnabled: true,
+        bevelThickness: 0.01,
+        bevelSize: 0.01,
+        bevelSegments: 1
+    };
+    
+    const bladeGeometry = new THREE.ExtrudeGeometry(bladeShape, extrudeSettings);
+    const bladeMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x22cc22,  // Dragon scimitar green color
+        metalness: 0.8,
+        roughness: 0.2
+    });
+    
+    const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+    
+    // Create the handle
+    const handleGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.2, 8);
+    const handleMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x8B4513,  // Brown color for handle
+        metalness: 0.3,
+        roughness: 0.8
+    });
+    
+    const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+    handle.position.set(0, -0.1, 0);
+    handle.rotation.x = Math.PI / 2;
+    
+    // Create the hilt (guard)
+    const hiltGeometry = new THREE.BoxGeometry(0.15, 0.03, 0.06);
+    const hiltMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xFFD700,  // Gold color
+        metalness: 0.8,
+        roughness: 0.2
+    });
+    
+    const hilt = new THREE.Mesh(hiltGeometry, hiltMaterial);
+    hilt.position.set(0, 0, 0);
+    
+    // Add all parts to the scimitar group
+    scimitarGroup.add(blade);
+    scimitarGroup.add(handle);
+    scimitarGroup.add(hilt);
+    
+    // Position and rotate the scimitar
+    scimitarGroup.rotation.z = Math.PI / 6;  // Tilt the scimitar
+    scimitarGroup.rotation.y = Math.PI / 2;  // Orient it outward
+    scimitarGroup.position.set(0.2, 0, 0.1);  // Position relative to hand
+    scimitarGroup.scale.set(1.25, 1.25, 1.25);  // Half the previous scale of 2.5
+    
+    // Attach the scimitar to the right arm
+    character.arms.right.add(scimitarGroup);
+    
+    return scimitarGroup;
 }
 
 // Expose globally
@@ -193,3 +266,4 @@ window.startWalkingAnimation = startWalkingAnimation;
 window.startIdleAnimation = startIdleAnimation;
 window.startJumpAnimation = startJumpAnimation;
 window.updateCharacterAnimation = updateCharacterAnimation;
+window.createDragonScimitar = createDragonScimitar;
