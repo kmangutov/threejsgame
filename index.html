@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arena Game</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif;
+        }
+        canvas { 
+            display: block; 
+        }
+        #ui {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div>Health: <span id="health">100</span>%</div>
+    </div>
+    <div id="controls">
+        <div>WASD - Move</div>
+        <div>Left/Right Arrows - Turn</div>
+        <div>Space - Jump</div>
+        <div>Right-click + Drag - Turn character</div>
+        <div>Left-click + Mouse - Camera</div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 0, 0);
+
+        // Renderer setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
+        scene.add(directionalLight);
+
+        // Ground plane
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x355e3b,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Add grass patches
+        function createGrassPatch(x, z, size = 5) {
+            const grassGeometry = new THREE.PlaneGeometry(size, size);
+            const grassMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x7cfc00,
+                roughness: 0.9
+            });
+            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.set(x, 0.01, z); // Slightly above ground
+            scene.add(grass);
+        }
+
+        // Place random grass patches
+        for (let i = 0; i < 30; i++) {
+            const x = Math.random() * 80 - 40;
+            const z = Math.random() * 80 - 40;
+            const size = Math.random() * 3 + 2;
+            createGrassPatch(x, z, size);
+        }
+
+        // Create a simple tree
+        function createTree(x, z) {
+            const trunkGeometry = new THREE.BoxGeometry(0.5, 2, 0.5);
+            const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.set(x, 1, z);
+            trunk.castShadow = true;
+            scene.add(trunk);
+
+            // Create leaves (simple box for a Minecraft-like look)
+            const leavesGeometry = new THREE.BoxGeometry(2, 2, 2);
+            const leavesMaterial = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+            leaves.position.set(x, 3, z);
+            leaves.castShadow = true;
+            scene.add(leaves);
+
+            return { trunk, leaves };
+        }
+
+        // Place random trees
+        for (let i = 0; i < 15; i++) {
+            const x = Math.random() * 80 - 40;
+            const z = Math.random() * 80 - 40;
+            createTree(x, z);
+        }
+
+        // Create a river
+        function createRiver() {
+            const riverGeometry = new THREE.PlaneGeometry(10, 60);
+            const riverMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x4169e1,
+                transparent: true,
+                opacity: 0.8
+            });
+            const river = new THREE.Mesh(riverGeometry, riverMaterial);
+            river.rotation.x = -Math.PI / 2;
+            river.position.set(20, 0.05, 0); // Slightly above ground
+            scene.add(river);
+
+            // Create river banks
+            const bankGeometry = new THREE.BoxGeometry(1, 0.3, 60);
+            const bankMaterial = new THREE.MeshStandardMaterial({ color: 0xc2b280 });
+            
+            const leftBank = new THREE.Mesh(bankGeometry, bankMaterial);
+            leftBank.position.set(15, 0.15, 0);
+            scene.add(leftBank);
+            
+            const rightBank = new THREE.Mesh(bankGeometry, bankMaterial);
+            rightBank.position.set(25, 0.15, 0);
+            scene.add(rightBank);
+        }
+
+        createRiver();
+
+        // Create player character (Minecraft/Roblox style)
+        const player = {
+            body: null,
+            head: null,
+            arms: { left: null, right: null },
+            legs: { left: null, right: null },
+            group: new THREE.Group(),
+            health: 100,
+            speed: 0.15,
+            turnSpeed: 0.03,
+            jumpForce: 0.3,
+            jumping: false,
+            velocity: 0,
+            gravity: 0.01
+        };
+
+        function createPlayer() {
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(1, 1.5, 0.5);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x3333ff });
+            player.body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            player.body.position.y = 0.75;
+            player.body.castShadow = true;
+            player.group.add(player.body);
+
+            // Head
+            const headGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            const headMaterial = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            player.head = new THREE.Mesh(headGeometry, headMaterial);
+            player.head.position.y = 1.8;
+            player.head.castShadow = true;
+            player.group.add(player.head);
+
+            // Arms
+            const armGeometry = new THREE.BoxGeometry(0.25, 1, 0.25);
+            const armMaterial = new THREE.MeshStandardMaterial({ color: 0x3333ff });
+            
+            player.arms.left = new THREE.Mesh(armGeometry, armMaterial);
+            player.arms.left.position.set(-0.625, 0.75, 0);
+            player.arms.left.castShadow = true;
+            player.group.add(player.arms.left);
+            
+            player.arms.right = new THREE.Mesh(armGeometry, armMaterial);
+            player.arms.right.position.set(0.625, 0.75, 0);
+            player.arms.right.castShadow = true;
+            player.group.add(player.arms.right);
+
+            // Legs
+            const legGeometry = new THREE.BoxGeometry(0.25, 1, 0.25);
+            const legMaterial = new THREE.MeshStandardMaterial({ color: 0x000066 });
+            
+            player.legs.left = new THREE.Mesh(legGeometry, legMaterial);
+            player.legs.left.position.set(-0.25, -0.25, 0);
+            player.legs.left.castShadow = true;
+            player.group.add(player.legs.left);
+            
+            player.legs.right = new THREE.Mesh(legGeometry, legMaterial);
+            player.legs.right.position.set(0.25, -0.25, 0);
+            player.legs.right.castShadow = true;
+            player.group.add(player.legs.right);
+
+            player.group.position.y = 1;
+            scene.add(player.group);
+
+            // Create a helper to show forward direction
+            const directionHelper = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, -1),
+                new THREE.Vector3(0, 0, 0),
+                0.5,
+                0xff0000
+            );
+            player.group.add(directionHelper);
+        }
+
+        createPlayer();
+
+        // Camera follow
+        function updateCamera() {
+            const cameraOffset = new THREE.Vector3(0, 5, 10);
+            const rotatedOffset = cameraOffset.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
+            camera.position.copy(player.group.position).add(rotatedOffset);
+            camera.lookAt(player.group.position);
+        }
+
+        // Controls
+        const keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            left: false,
+            right: false,
+            space: false
+        };
+
+        window.addEventListener('keydown', (e) => {
+            switch (e.key.toLowerCase()) {
+                case 'w': keys.w = true; break;
+                case 'a': keys.a = true; break;
+                case 's': keys.s = true; break;
+                case 'd': keys.d = true; break;
+                case 'arrowleft': keys.left = true; break;
+                case 'arrowright': keys.right = true; break;
+                case ' ': keys.space = true; break;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            switch (e.key.toLowerCase()) {
+                case 'w': keys.w = false; break;
+                case 'a': keys.a = false; break;
+                case 's': keys.s = false; break;
+                case 'd': keys.d = false; break;
+                case 'arrowleft': keys.left = false; break;
+                case 'arrowright': keys.right = false; break;
+                case ' ': keys.space = false; break;
+            }
+        });
+
+        // Mouse controls
+        let isDragging = false;
+        let isRightClick = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        
+        window.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            isRightClick = e.button === 2;
+            previousMousePosition.x = e.clientX;
+            previousMousePosition.y = e.clientY;
+        });
+        
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const deltaMove = {
+                x: e.clientX - previousMousePosition.x,
+                y: e.clientY - previousMousePosition.y
+            };
+            
+            if (isRightClick) {
+                // Right-click drag to turn character
+                player.group.rotation.y -= deltaMove.x * 0.01;
+            } else {
+                // Left-click drag to move camera
+                camera.position.y = Math.max(2, camera.position.y - deltaMove.y * 0.05);
+            }
+            
+            previousMousePosition.x = e.clientX;
+            previousMousePosition.y = e.clientY;
+        });
+        
+        // Prevent context menu on right-click
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        // Update player movement
+        function updatePlayerMovement() {
+            // Jumping logic
+            if (keys.space && !player.jumping) {
+                player.jumping = true;
+                player.velocity = player.jumpForce;
+            }
+            
+            if (player.jumping) {
+                player.group.position.y += player.velocity;
+                player.velocity -= player.gravity;
+                
+                if (player.group.position.y <= 1) {
+                    player.group.position.y = 1;
+                    player.jumping = false;
+                    player.velocity = 0;
+                }
+            }
+
+            // Turning
+            if (keys.left) {
+                player.group.rotation.y += player.turnSpeed;
+            }
+            if (keys.right) {
+                player.group.rotation.y -= player.turnSpeed;
+            }
+
+            // Movement relative to facing direction
+            const forward = new THREE.Vector3(0, 0, -1);
+            const right = new THREE.Vector3(1, 0, 0);
+            
+            // Apply rotation to direction vectors
+            forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
+            right.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
+            
+            // Apply movement based on keys
+            if (keys.w) {
+                player.group.position.add(forward.multiplyScalar(player.speed));
+            }
+            if (keys.s) {
+                const backward = forward.clone().negate();
+                player.group.position.add(backward.multiplyScalar(player.speed));
+            }
+            if (keys.a) {
+                const left = right.clone().negate();
+                player.group.position.add(left.multiplyScalar(player.speed));
+            }
+            if (keys.d) {
+                player.group.position.add(right.multiplyScalar(player.speed));
+            }
+
+            // Animate walking
+            if (keys.w || keys.a || keys.s || keys.d) {
+                const walkCycle = Math.sin(Date.now() * 0.01) * 0.1;
+                player.arms.left.rotation.x = walkCycle;
+                player.arms.right.rotation.x = -walkCycle;
+                player.legs.left.rotation.x = -walkCycle;
+                player.legs.right.rotation.x = walkCycle;
+            } else {
+                player.arms.left.rotation.x = 0;
+                player.arms.right.rotation.x = 0;
+                player.legs.left.rotation.x = 0;
+                player.legs.right.rotation.x = 0;
+            }
+
+            // Update UI
+            document.getElementById('health').textContent = player.health;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updatePlayerMovement();
+            updateCamera();
+            
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
