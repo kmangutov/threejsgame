@@ -1,4 +1,4 @@
-import { createWorld, createRiver } from "./world.js";
+import { createWorld, createRiver, updateWorld } from "./world.js";
 import { createCharacter } from "./character_model.js";
 import { setupPlayerInput, updatePlayerMovement, cameraAngle, cameraHeight, cameraDistance, cameraFollow } from "./controls.js";
 
@@ -91,6 +91,7 @@ function gameLoop() {
         // Update game logic with consistent delta time
         updatePlayerMovement(player, 1.0); // Use fixed time step for consistent animations
         updateCamera();
+        updateWorld(deltaTime); // Add world updates for vegetation animation
         
         // Update any tweens
         TWEEN.update();
