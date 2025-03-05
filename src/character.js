@@ -10,7 +10,10 @@ function createCharacter(scene) {
         health: 100,
         movementState: "idle",
         animationSpeed: 0.2,
-        armRotation: 0
+        armRotation: 0,
+        isSlashing: false,
+        slashTween: null,
+        originalFaceRotation: 0
     };
 
     // Body
@@ -89,6 +92,54 @@ function startJumpAnimation(character) {
     }
 }
 
+function startSlashAnimation(character) {
+    if (character.isSlashing) return;
+    character.isSlashing = true;
+
+    // Get the smile group (third child of the face group)
+    const faceGroup = character.head.children[0];
+    const smileGroup = faceGroup.children[2];
+    character.originalSmileRotation = smileGroup.rotation.z;
+
+    // Flip smile upside down around its center
+    new TWEEN.Tween(smileGroup.rotation)
+        .to({ z: Math.PI }, 300)
+        .start();
+
+    // Create slash animation for right arm and scimitar
+    const slashTween = new TWEEN.Tween(character.arms.right.rotation)
+        .to({ 
+            x: -Math.PI * 0.5,  // Raise arm up
+            y: Math.PI * 0.25   // Rotate slightly outward
+        }, 150)
+        .easing(TWEEN.Easing.Back.Out)
+        .chain(
+            new TWEEN.Tween(character.arms.right.rotation)
+                .to({ 
+                    x: -Math.PI * 0.25,  // Swing down
+                    y: -Math.PI * 0.5    // Swing across body
+                }, 200)
+                .easing(TWEEN.Easing.Cubic.Out)
+                .chain(
+                    new TWEEN.Tween(character.arms.right.rotation)
+                        .to({ 
+                            x: 0,  // Return to original position
+                            y: 0
+                        }, 300)
+                        .easing(TWEEN.Easing.Quadratic.InOut)
+                        .onComplete(() => {
+                            character.isSlashing = false;
+                            // Reset smile rotation
+                            smileGroup.rotation.z = 0;
+                            smileGroup.updateMatrix();
+                        })
+                )
+        )
+        .start();
+
+    character.slashTween = slashTween;
+}
+
 function updateCharacterAnimation(character, deltaTime) {
     // Handle jumping physics
     if (character.jumping) {
@@ -109,38 +160,44 @@ function updateCharacterAnimation(character, deltaTime) {
     }
     
     // Handle animations based on movement state
-    switch (character.movementState) {
-        case "walking":
-            // Walking animation - arms swing back and forth
-            character.armRotation += character.animationSpeed;
-            const armSwing = Math.sin(character.armRotation) * 0.5;
-            
-            character.arms.left.rotation.x = -armSwing;
-            character.arms.right.rotation.x = armSwing;
-            character.legs.left.rotation.x = armSwing;
-            character.legs.right.rotation.x = -armSwing;
-            break;
-            
-        case "idle":
-            // Idle animation - more prominent breathing movement
-            const breathe = Math.sin(Date.now() * 0.008) * 0.08;
-            character.body.position.y = 0.75 + breathe;
-            
-            // Slight head movement with breathing
-            character.head.position.y = 1.8 + breathe * 0.5;
-            
-            // Reset arm and leg rotations
-            character.arms.left.rotation.x = 0;
-            character.arms.right.rotation.x = 0;
-            character.legs.left.rotation.x = 0;
-            character.legs.right.rotation.x = 0;
-            break;
-            
-        case "jumping":
-            // Jumping animation - arms up
-            character.arms.left.rotation.x = -0.5;
-            character.arms.right.rotation.x = -0.5;
-            break;
+    if (!character.isSlashing) {  // Only run regular animations if not slashing
+        switch (character.movementState) {
+            case "walking":
+                // Walking animation - arms swing back and forth
+                character.armRotation += character.animationSpeed;
+                const armSwing = Math.sin(character.armRotation) * 0.5;
+                
+                character.arms.left.rotation.x = -armSwing;
+                character.arms.right.rotation.x = armSwing;
+                character.legs.left.rotation.x = armSwing;
+                character.legs.right.rotation.x = -armSwing;
+                break;
+                
+            case "idle":
+                // Idle animation - more prominent breathing movement
+                const breathe = Math.sin(Date.now() * 0.008) * 0.08;
+                character.body.position.y = 0.75 + breathe;
+                
+                // Slight head movement with breathing
+                character.head.position.y = 1.8 + breathe * 0.5;
+                
+                // Reset arm and leg rotations
+                if (!character.isSlashing) {
+                    character.arms.left.rotation.x = 0;
+                    character.arms.right.rotation.x = 0;
+                }
+                character.legs.left.rotation.x = 0;
+                character.legs.right.rotation.x = 0;
+                break;
+                
+            case "jumping":
+                // Jumping animation - arms up
+                character.arms.left.rotation.x = -0.5;
+                if (!character.isSlashing) {
+                    character.arms.right.rotation.x = -0.5;
+                }
+                break;
+        }
     }
 }
 
@@ -162,6 +219,9 @@ function addSmileyFace(head) {
     );
     rightEye.position.set(0.2, 0.1, 0.5);
     
+    // Create a group specifically for the smile to handle its rotation
+    const smileGroup = new THREE.Group();
+    
     // Smile (curved line)
     const smileGeometry = new THREE.BufferGeometry();
     const smileCurve = new THREE.QuadraticBezierCurve3(
@@ -178,12 +238,15 @@ function addSmileyFace(head) {
         new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 3 })
     );
     
+    // Add smile to its group and position the group
+    smileGroup.add(smile);
+    smileGroup.position.set(0, -0.1, 0); // Move pivot point to center of smile
+    smile.position.set(0, 0.1, 0); // Offset smile to compensate for group position
+    
     // Add all face elements to the face group
     faceGroup.add(leftEye);
     faceGroup.add(rightEye);
-    faceGroup.add(smile);
-    
-    // No need for additional positioning as we've set the z coordinates directly
+    faceGroup.add(smileGroup);
     
     // Add the face group to the head
     head.add(faceGroup);
@@ -266,4 +329,5 @@ window.startWalkingAnimation = startWalkingAnimation;
 window.startIdleAnimation = startIdleAnimation;
 window.startJumpAnimation = startJumpAnimation;
 window.updateCharacterAnimation = updateCharacterAnimation;
+window.startSlashAnimation = startSlashAnimation;
 window.createDragonScimitar = createDragonScimitar;

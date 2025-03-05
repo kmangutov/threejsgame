@@ -1,6 +1,6 @@
 // Ensure keys is declared only once
 if (typeof window.keys === "undefined") {
-    window.keys = { w: false, a: false, s: false, d: false, left: false, right: false, space: false };
+    window.keys = { w: false, a: false, s: false, d: false, left: false, right: false, space: false, q: false };
 }
 
 // Track Mouse
@@ -20,6 +20,11 @@ function setupPlayerInput(player) {
         if (e.key === "ArrowLeft") keys.left = true;
         if (e.key === "ArrowRight") keys.right = true;
         if (e.key === " ") keys.space = true;
+        
+        // Handle Q key press for slash animation
+        if (e.key.toLowerCase() === "q" && !player.isSlashing) {
+            startSlashAnimation(player);
+        }
     });
 
     window.addEventListener("keyup", (e) => {
