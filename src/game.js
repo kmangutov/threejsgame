@@ -1,3 +1,8 @@
+
+import { createWorld } from "./world.js";
+import { createRiver } from "./world.js";
+
+
 // Ensure scene and camera are only created once
 if (typeof window.scene === "undefined") {
     window.scene = new THREE.Scene();
@@ -38,6 +43,13 @@ createRiver(scene);
 // Player
 const player = createCharacter(scene);
 setupPlayerInput(player);
+
+/*
+export let cameraAngle = 0;
+export let cameraHeight = 5;
+export let cameraDistance = 10;
+export let cameraFollow = true; */
+import { cameraAngle, cameraHeight, cameraDistance, cameraFollow } from "./player.js";
 
 // Camera Follow Function
 function updateCamera() {

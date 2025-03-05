@@ -7,10 +7,10 @@ if (typeof window.keys === "undefined") {
 let isDragging = false;
 let isRightClick = false;
 let previousMousePosition = { x: 0, y: 0 };
-let cameraAngle = 0;
-let cameraHeight = 5;
-let cameraDistance = 10;
-let cameraFollow = true; // Single boolean state for camera follow
+export let cameraAngle = 0;
+export let cameraHeight = 5;
+export let cameraDistance = 10;
+export let cameraFollow = true; // Single boolean state for camera follow
 let deltaMove = { x: 0, y: 0 };
 
 function setupPlayerInput(player) {
@@ -42,11 +42,6 @@ function setupPlayerInput(player) {
             cameraFollow = false;
         }
         
-        // Stop any active camera tween when user starts dragging
-        if (cameraTween) {
-            cameraTween.stop();
-            cameraTween = null;
-        }
     });
 
     window.addEventListener("mouseup", (e) => {

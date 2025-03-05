@@ -1,4 +1,6 @@
-function createWorld(scene) {
+import { randomPosition } from "./utils.js";
+
+export function createWorld(scene) {
     const groundGeometry = new THREE.PlaneGeometry(100, 100);
     const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x355e3b });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -33,7 +35,7 @@ function createTree(scene, x, z) {
     scene.add(leaves);
 }
 
-function createRiver(scene) {
+export function createRiver(scene) {
     const river = new THREE.Mesh(new THREE.PlaneGeometry(10, 60), new THREE.MeshStandardMaterial({ color: 0x4169e1 }));
     river.rotation.x = -Math.PI / 2;
     river.position.set(20, 0.05, 0);
