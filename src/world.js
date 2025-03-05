@@ -36,7 +36,7 @@ function createTree(scene, x, z) {
 }
 
 export function createRiver(scene) {
-    const river = new THREE.Mesh(new THREE.PlaneGeometry(10, 60), new THREE.MeshStandardMaterial({ color: 0x4169e1 }));
+    const river = new THREE.Mesh(new THREE.PlaneGeometry(10, 120), new THREE.MeshStandardMaterial({ color: 0x4169e1 }));
     river.rotation.x = -Math.PI / 2;
     river.position.set(20, 0.05, 0);
     scene.add(river);

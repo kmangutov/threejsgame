@@ -1,4 +1,4 @@
-import { createWorld } from "./world.js";
+import { createWorld, createRiver } from "./world.js";
 import { createCharacter } from "./character_model.js";
 import { setupPlayerInput, updatePlayerMovement, cameraAngle, cameraHeight, cameraDistance, cameraFollow } from "./controls.js";
 
@@ -37,6 +37,7 @@ scene.add(directionalLight);
 
 // World
 createWorld(scene);
+createRiver(scene);
 
 // Player
 const player = createCharacter(scene);
