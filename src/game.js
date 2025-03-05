@@ -1,7 +1,6 @@
-
 import { createWorld } from "./world.js";
-import { createRiver } from "./world.js";
-
+import { createCharacter } from "./character_model.js";
+import { setupPlayerInput, updatePlayerMovement, cameraAngle, cameraHeight, cameraDistance, cameraFollow } from "./controls.js";
 
 // Ensure scene and camera are only created once
 if (typeof window.scene === "undefined") {
@@ -31,20 +30,17 @@ if (typeof window.renderer === "undefined") {
 const ambientLight = new THREE.AmbientLight(0x404040);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(10, 20, 10);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 5, 5);
 directionalLight.castShadow = true;
 scene.add(directionalLight);
 
 // World
 createWorld(scene);
-createRiver(scene);
 
 // Player
 const player = createCharacter(scene);
 setupPlayerInput(player);
-
-import { cameraAngle, cameraHeight, cameraDistance, cameraFollow } from "./controls.js";
 
 // Camera Follow Function
 function updateCamera() {

@@ -1,3 +1,5 @@
+import { startSlashAnimation, startJumpAnimation, updateCharacterAnimation } from './character_model.js';
+
 // Ensure keys is declared only once
 if (typeof window.keys === "undefined") {
     window.keys = { w: false, a: false, s: false, d: false, left: false, right: false, space: false, q: false };
@@ -13,7 +15,7 @@ export let cameraDistance = 10;
 export let cameraFollow = true; // Single boolean state for camera follow
 let deltaMove = { x: 0, y: 0 };
 
-function setupPlayerInput(player) {
+export function setupPlayerInput(player) {
     window.addEventListener("keydown", (e) => {
         const key = e.key.toLowerCase();
         if (keys.hasOwnProperty(key)) keys[key] = true;
@@ -46,7 +48,6 @@ function setupPlayerInput(player) {
         if (e.button === 0) {
             cameraFollow = false;
         }
-        
     });
 
     window.addEventListener("mouseup", (e) => {
@@ -88,7 +89,7 @@ function setupPlayerInput(player) {
 }
 
 // Move and Rotate Player
-function updatePlayerMovement(player, deltaTime) {
+export function updatePlayerMovement(player, deltaTime) {
     const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
     const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.group.rotation.y);
 
@@ -148,11 +149,3 @@ function resetCameraFollow(player) {
     cameraHeight = 5;
     cameraDistance = 10;
 }
-
-// Expose globally
-window.setupPlayerInput = setupPlayerInput;
-window.updatePlayerMovement = updatePlayerMovement;
-window.cameraAngle = cameraAngle;
-window.cameraHeight = cameraHeight;
-window.cameraDistance = cameraDistance;
-window.cameraFollow = cameraFollow;
