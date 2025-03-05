@@ -44,12 +44,7 @@ createRiver(scene);
 const player = createCharacter(scene);
 setupPlayerInput(player);
 
-/*
-export let cameraAngle = 0;
-export let cameraHeight = 5;
-export let cameraDistance = 10;
-export let cameraFollow = true; */
-import { cameraAngle, cameraHeight, cameraDistance, cameraFollow } from "./player.js";
+import { cameraAngle, cameraHeight, cameraDistance, cameraFollow } from "./controls.js";
 
 // Camera Follow Function
 function updateCamera() {
