@@ -10,5 +10,6 @@ npm run dev
 
 Deploy
 ```shell
+npm run build
 npm run deploy
 ```
