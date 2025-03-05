@@ -160,44 +160,48 @@ function updateCharacterAnimation(character, deltaTime) {
     }
     
     // Handle animations based on movement state
-    if (!character.isSlashing) {  // Only run regular animations if not slashing
-        switch (character.movementState) {
-            case "walking":
-                // Walking animation - arms swing back and forth
-                character.armRotation += character.animationSpeed;
-                const armSwing = Math.sin(character.armRotation) * 0.5;
-                
-                character.arms.left.rotation.x = -armSwing;
+    switch (character.movementState) {
+        case "walking":
+            // Walking animation - arms swing back and forth
+            character.armRotation += character.animationSpeed;
+            const armSwing = Math.sin(character.armRotation) * 0.5;
+            
+            // Only animate left arm and legs during walking
+            character.arms.left.rotation.x = -armSwing;
+            // Only animate right arm if not slashing
+            if (!character.isSlashing) {
                 character.arms.right.rotation.x = armSwing;
-                character.legs.left.rotation.x = armSwing;
-                character.legs.right.rotation.x = -armSwing;
-                break;
-                
-            case "idle":
-                // Idle animation - more prominent breathing movement
-                const breathe = Math.sin(Date.now() * 0.008) * 0.08;
-                character.body.position.y = 0.75 + breathe;
-                
-                // Slight head movement with breathing
-                character.head.position.y = 1.8 + breathe * 0.5;
-                
-                // Reset arm and leg rotations
-                if (!character.isSlashing) {
-                    character.arms.left.rotation.x = 0;
-                    character.arms.right.rotation.x = 0;
-                }
-                character.legs.left.rotation.x = 0;
-                character.legs.right.rotation.x = 0;
-                break;
-                
-            case "jumping":
-                // Jumping animation - arms up
-                character.arms.left.rotation.x = -0.5;
-                if (!character.isSlashing) {
-                    character.arms.right.rotation.x = -0.5;
-                }
-                break;
-        }
+            }
+            character.legs.left.rotation.x = armSwing;
+            character.legs.right.rotation.x = -armSwing;
+            break;
+            
+        case "idle":
+            // Idle animation - more prominent breathing movement
+            const breathe = Math.sin(Date.now() * 0.008) * 0.08;
+            character.body.position.y = 0.75 + breathe;
+            
+            // Slight head movement with breathing
+            character.head.position.y = 1.8 + breathe * 0.5;
+            
+            // Reset arm and leg rotations
+            character.arms.left.rotation.x = 0;
+            // Only reset right arm if not slashing
+            if (!character.isSlashing) {
+                character.arms.right.rotation.x = 0;
+            }
+            character.legs.left.rotation.x = 0;
+            character.legs.right.rotation.x = 0;
+            break;
+            
+        case "jumping":
+            // Jumping animation - arms up
+            character.arms.left.rotation.x = -0.5;
+            // Only animate right arm if not slashing
+            if (!character.isSlashing) {
+                character.arms.right.rotation.x = -0.5;
+            }
+            break;
     }
 }
 
